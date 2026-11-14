@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>scrsort — Screenshot app for Mac with text search and annotation</title>
+<meta name="description" content="scrsort is a screenshot app for Mac. Capture, annotate and organise screenshots, then find any of them by the text inside. Lives in your menu bar. Private by design.">
+<link rel="canonical" href="https://scrsort.github.io/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ecebe7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#19191b" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="scrsort">
+<meta property="og:title" content="scrsort — Screenshot app for Mac">
+<meta property="og:description" content="Capture, annotate and find any screenshot by the text inside it. Lives in your menu bar. Private by design.">
+<meta property="og:url" content="https://scrsort.github.io/">
+<meta property="og:image" content="https://scrsort.github.io/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "scrsort",
+      "description": "A screenshot app for Mac. Capture, annotate and organise screenshots, and search them by the text inside. Lives in the menu bar and keeps everything on your Mac.",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "macOS 15 or later",
+      "softwareVersion": "0.1.0",
+      "url": "https://scrsort.github.io/",
+      "downloadUrl": "https://github.com/f4w4z/scrsort-releases/releases/latest",
+      "image": "https://scrsort.github.io/icon-512.png",
+      "screenshot": "https://scrsort.github.io/img/editor-dark.png",
+      "featureList": [
+        "Capture an area, a window or the whole screen",
+        "Annotate with arrows, shapes, text, highlighter and numbered steps",
+        "Pixelate sensitive information",
+        "Search screenshots by the text inside them, using on-device OCR",
+        "Favorites and collections",
+        "Optional public share links",
+        "Customisable global keyboard shortcuts"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "How do I search for text inside a screenshot on Mac?",
+          "acceptedAnswer": { "@type": "Answer", "text": "scrsort reads the text in every screenshot on your Mac as it is imported. Click the scrsort icon in the menu bar and type a word, and matching screenshots appear as you type." } },
+        { "@type": "Question", "name": "Does scrsort upload my screenshots?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Screenshots and the text recognised in them stay on your Mac. A screenshot is uploaded only when you choose Share for it, and you can stop sharing at any time." } },
+        { "@type": "Question", "name": "Does scrsort replace the built-in Mac screenshot shortcuts?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Command-Shift-3, 4 and 5 keep working as before, and screenshots taken with them are added to scrsort automatically. scrsort adds its own shortcuts, which you can change." } },
+        { "@type": "Question", "name": "Where are my screenshots stored?",
+          "acceptedAnswer": { "@type": "Answer", "text": "scrsort keeps a copy in its own library in your Application Support folder. The original files in your screenshot folder are never moved or changed." } },
+        { "@type": "Question", "name": "Which Macs does scrsort work on?",
+          "acceptedAnswer": { "@type": "Answer", "text": "scrsort requires macOS 15 or later." } }
+      ]
+    }
+  ]
+}
+</script>
+
+<style>
+:root {
+  --bg: #ecebe7; --ink: #1a1a1c; --muted: #6d6b66; --rule: rgba(0,0,0,.1); --paper: #fff; --chrome: #f4f3f0;
+  --red: #ff3b30; --hl: #ffe04d; --key: #fff; --field: rgba(0,0,0,.065);
+  --lift: 0 1px 1px rgba(0,0,0,.06), 0 18px 40px -16px rgba(30,20,0,.32), 0 0 0 .5px rgba(0,0,0,.16);
+  --glass: rgba(236,235,231,.7); --menubar: rgba(255,255,255,.5); --panel: rgba(250,250,250,.82);
+  --ease-out: cubic-bezier(.23,1,.32,1);
+  --round: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #19191b; --ink: #f1f0ed; --muted: #9a9892; --rule: rgba(255,255,255,.1); --paper: #262628; --chrome: #303033;
+    --hl: #8a6d00; --key: #38383b; --field: rgba(255,255,255,.1);
+    --lift: 0 18px 40px -16px rgba(0,0,0,.9), 0 0 0 .5px rgba(255,255,255,.16);
+    --glass: rgba(25,25,27,.68); --menubar: rgba(30,30,30,.5); --panel: rgba(36,36,38,.84);
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 84px; background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; height: auto; display: block; }
+p, h1, h2, h3, figure { margin: 0; }
+.col { max-width: 1060px; margin: 0 auto; padding: 0 24px; }
+
+/* Top bar: the editor's toolbar. Tools jump to sections, swatches recolour the page's annotations. */
+nav.top {
+  position: sticky; top: 12px; z-index: 30; width: max-content; max-width: calc(100% - 20px); margin: 12px auto 0;
+  display: flex; align-items: center; gap: 4px; padding: 5px; border-radius: 14px; font-size: 13px;
+  background: var(--glass); backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%);
+  box-shadow: 0 0 0 .5px color-mix(in srgb, var(--ink) 18%, transparent), 0 12px 28px -14px rgba(0,0,0,.4), inset 0 .5px 0 rgba(255,255,255,.5);
+}
+nav.top .brand { display: flex; align-items: center; gap: 7px; font: 700 15px var(--round); padding: 0 8px 0 5px; }
+nav.top .brand img { width: 26px; height: 26px; }
+nav.top .sep { width: 1px; height: 20px; background: var(--rule); margin: 0 5px; }
+nav.top a.tool {
+  display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 9px; border-radius: 8px; color: var(--muted);
+  transition: background .15s ease, color .15s ease;
+}
+nav.top a.tool svg { width: 16px; height: 16px; flex: none; }
+@media (hover: hover) { nav.top a.tool:hover { color: var(--ink); background: var(--field); } }
+nav.top a.tool.on { color: var(--ink); background: color-mix(in srgb, var(--ink) 11%, transparent); }
+nav.top .inks { display: flex; gap: 7px; padding: 0 6px; }
+nav.top .inks button {
+  width: 15px; height: 15px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; background: var(--c);
+  box-shadow: inset 0 0 0 .5px rgba(0,0,0,.2); transition: transform .14s var(--ease-out), box-shadow .14s var(--ease-out);
+}
+nav.top .inks button:active { transform: scale(.88); }
+nav.top .inks button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--c); }
+.btn {
+  display: inline-block; background: var(--ink); color: var(--bg); border-radius: 12px; padding: 13px 22px; font: 600 16px var(--round);
+  transition: transform .16s var(--ease-out); box-shadow: 0 6px 16px -8px rgba(0,0,0,.5);
+}
+@media (hover: hover) { .btn:hover { transform: translateY(-1px); } }
+.btn:active { transform: scale(.97); }
+.btn.s { padding: 6px 12px; font-size: 13.5px; border-radius: 9px; box-shadow: none; margin-left: 4px; }
+
+/* Bottom glass fade */
+.edge { position: fixed; left: 0; right: 0; bottom: 0; height: 72px; z-index: 20; pointer-events: none; }
+.edge i { position: absolute; inset: 0; backdrop-filter: blur(var(--b)); -webkit-backdrop-filter: blur(var(--b)); -webkit-mask-image: var(--m); mask-image: var(--m); }
+.edge i:nth-child(1) { --b: 1px; --m: linear-gradient(transparent 0%, #000 25%, #000 50%, transparent 75%); }
+.edge i:nth-child(2) { --b: 3px; --m: linear-gradient(transparent 25%, #000 50%, #000 75%, transparent 100%); }
+.edge i:nth-child(3) { --b: 7px; --m: linear-gradient(transparent 50%, #000 75%); }
+.edge i:nth-child(4) { --b: 14px; --m: linear-gradient(transparent 75%, #000 100%); }
+
+/* Annotations: the same marks the app makes */
+.hl { background: linear-gradient(var(--hl), var(--hl)) no-repeat 0 62% / 0% 58%; transition: background-size .6s var(--ease-out) .25s; padding: 0 .08em; margin: 0 -.08em; border-radius: .12em; }
+.in .hl, .hl.in { background-size: 100% 58%; }
+.ring { position: relative; white-space: nowrap; }
+.ring svg { position: absolute; left: -7%; top: -14%; width: 114%; height: 132%; overflow: visible; pointer-events: none; }
+svg.ink path { fill: none; stroke: var(--red); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset .8s cubic-bezier(.4,.6,.2,1) .5s; }
+.in svg.ink path, svg.ink.in path { stroke-dashoffset: 0; }
+svg.ink path + path { transition-delay: 1.15s; transition-duration: .25s; }
+.step {
+  display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--red); color: #fff;
+  font: 700 18px var(--round); box-shadow: 0 0 0 3px #fff, 0 3px 8px rgba(0,0,0,.3);
+}
+.scrawl { font: 800 22px/1.1 var(--round); color: var(--red); -webkit-text-stroke: 5px #fff; paint-order: stroke fill; letter-spacing: -.01em; }
+.pix { display: inline-grid; grid-template-columns: repeat(14, 9px); grid-auto-rows: 9px; vertical-align: -5px; border-radius: 2px; overflow: hidden; }
+.pix i { background: color-mix(in srgb, var(--ink) calc(var(--a) * 1%), var(--paper)); }
+
+/* Hero */
+.hero { padding: 76px 0 0; text-align: center; position: relative; }
+h1 { font: 800 clamp(44px, 8.4vw, 96px)/.98 var(--round); letter-spacing: -.035em; }
+.lede { color: var(--muted); font-size: clamp(17px, 2vw, 20px); line-height: 1.45; max-width: 520px; margin: 26px auto 0; text-wrap: pretty; }
+.go { position: relative; display: inline-block; margin-top: 30px; }
+.go .note { position: absolute; left: calc(100% + 26px); top: -34px; width: 190px; text-align: left; display: flex; align-items: center; gap: 10px; transform: rotate(-4deg); }
+.go .note svg { position: absolute; left: -34px; top: 30px; width: 70px; height: 44px; overflow: visible; }
+.fine { font-size: 12.5px; color: var(--muted); margin-top: 12px; }
+
+/* Desktop demo */
+.demo { position: relative; margin-top: 74px; }
+.demo .tag { position: absolute; z-index: 8; left: 34px; top: -30px; transform: rotate(-3deg); display: flex; align-items: flex-end; gap: 6px; pointer-events: none; }
+.demo .tag svg { width: 46px; height: 50px; overflow: visible; margin-bottom: -34px; }
+.demo button { position: absolute; z-index: 8; right: 14px; bottom: 14px; font: 600 13px var(--round); color: #fff; background: rgba(0,0,0,.45); border: 0; border-radius: 8px; padding: 7px 12px; cursor: pointer; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.demo button { transition: transform .14s var(--ease-out), background .15s ease; }
+.demo button:hover { background: rgba(0,0,0,.62); }
+.demo button:active { transform: scale(.97); }
+.stage {
+  position: relative; height: 520px; border-radius: 16px; overflow: hidden; text-align: left; box-shadow: var(--lift);
+  background: var(--wall); cursor: crosshair; user-select: none; -webkit-user-select: none; touch-action: pan-y;
+  --wall: radial-gradient(50% 70% at 86% 4%, #ffcf8f 0, transparent 60%), radial-gradient(60% 80% at 8% 0%, #7fb8ff 0, transparent 62%),
+          radial-gradient(70% 90% at 74% 100%, #ff9f8f 0, transparent 62%), radial-gradient(60% 80% at 0% 100%, #7fd1b9 0, transparent 60%), #e4d2bb;
+}
+@media (prefers-color-scheme: dark) {
+  .stage { --wall: radial-gradient(50% 70% at 86% 4%, #8a5226 0, transparent 60%), radial-gradient(60% 80% at 8% 0%, #1f4f93 0, transparent 62%),
+          radial-gradient(70% 90% at 74% 100%, #8a2f3f 0, transparent 62%), radial-gradient(60% 80% at 0% 100%, #1c6352 0, transparent 60%), #40372c; }
+}
+.menubar {
+  height: 26px; display: flex; align-items: center; justify-content: flex-end; gap: 15px; padding: 0 14px; cursor: default; color: var(--ink);
+  background: var(--menubar); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); font-size: 12px; font-weight: 500;
+}
+.menubar svg { width: 15px; height: 15px; display: block; }
+.menubar .on { background: color-mix(in srgb, var(--ink) 16%, transparent); border-radius: 5px; padding: 3px 7px; margin: 0 -7px; cursor: pointer; }
+.panel {
+  position: absolute; z-index: 4; top: 34px; right: 60px; width: 336px; border-radius: 13px; padding: 12px; cursor: default; color: var(--ink);
+  background: var(--panel); backdrop-filter: blur(34px) saturate(160%); -webkit-backdrop-filter: blur(34px) saturate(160%);
+  box-shadow: 0 30px 60px -18px rgba(0,0,0,.45), 0 0 0 .5px color-mix(in srgb, var(--ink) 22%, transparent);
+  transition: opacity .18s var(--ease-out), transform .18s var(--ease-out); transform-origin: 82% 0;
+}
+.stage.closed .panel { opacity: 0; transform: scale(.96) translateY(-6px); pointer-events: none; }
+.search { display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 9px; border-radius: 7px; background: var(--field); font-size: 13px; }
+.search svg { width: 13px; height: 13px; flex: none; opacity: .55; }
+.search input { all: unset; flex: 1; min-width: 0; font-size: 13px; }
+.search input::placeholder { color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; min-height: 152px; align-content: start; }
+.shot {
+  aspect-ratio: 4/3; border-radius: 6px; padding: 7px; overflow: hidden; background: #fff; color: #1d1d1f;
+  font: 500 6.5px/1.5 var(--sans); box-shadow: 0 1px 3px rgba(0,0,0,.25), 0 0 0 .5px rgba(0,0,0,.08);
+}
+.shot b { display: block; font-size: 8px; font-weight: 700; margin-bottom: 2px; white-space: nowrap; }
+.shot.d { background: #1f2430; color: #c8d0e0; } .shot.w { background: linear-gradient(135deg, #ffe1b0, #ffb199); }
+.shot.g { background: linear-gradient(135deg, #c9f0d6, #a5d8f5); } .shot.v { background: linear-gradient(135deg, #ddd2ff, #f7c1e3); }
+.shot[hidden] { display: none; }
+.shot.new { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.55); display: flex; flex-direction: column; justify-content: flex-end; outline: 2px solid #0a84ff; outline-offset: 1px; }
+.none { grid-column: 1/-1; text-align: center; padding: 44px 0; color: var(--muted); font-size: 12px; }
+.pfoot { display: flex; justify-content: space-between; margin-top: 11px; font-size: 12px; color: var(--muted); }
+.win { position: absolute; left: 30px; bottom: -110px; width: 500px; border-radius: 11px; overflow: hidden; pointer-events: none; box-shadow: 0 30px 60px -18px rgba(0,0,0,.5), 0 0 0 .5px rgba(0,0,0,.3); transform: rotate(-1.5deg); }
+.sel { position: absolute; z-index: 5; border: 1px solid #fff; background: rgba(255,255,255,.16); box-shadow: 0 0 0 9999px rgba(0,0,0,.26); pointer-events: none; }
+.sel span { position: absolute; right: 0; top: calc(100% + 6px); font: 500 11px var(--sans); background: rgba(0,0,0,.75); color: #fff; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+.ghost { position: absolute; z-index: 6; border-radius: 4px; box-shadow: 0 8px 30px rgba(0,0,0,.45), 0 0 0 1.5px #fff; pointer-events: none; transform-origin: 0 0; }
+.flash { position: absolute; inset: 0; z-index: 7; background: #fff; opacity: 0; pointer-events: none; }
+
+/* The pile */
+.pile { padding: 120px 0 40px; }
+.pile > .col > p.say { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 44px; }
+.heap { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: 26px; align-items: start; }
+.card {
+  --x: 0px; --y: 0px; position: relative; background: var(--paper); border-radius: 13px; box-shadow: var(--lift);
+  transform: translate(var(--x), var(--y)) rotate(var(--r, 0deg)); transition: box-shadow .2s var(--ease-out), scale .2s var(--ease-out), opacity .5s var(--ease-out), translate .6s var(--ease-out);
+  opacity: 0; translate: 0 18px; cursor: grab; touch-action: pan-y;
+}
+.card.in { opacity: 1; translate: 0 0; }
+.card.drag { cursor: grabbing; z-index: 9; scale: 1.015; box-shadow: 0 40px 70px -20px rgba(0,0,0,.5), 0 0 0 .5px rgba(0,0,0,.2); }
+.card .bar { height: 30px; display: flex; align-items: center; gap: 6px; padding: 0 11px; background: var(--chrome); border-radius: 13px 13px 0 0; box-shadow: inset 0 -.5px 0 var(--rule); font-size: 11.5px; color: var(--muted); }
+.card .bar i { width: 10px; height: 10px; border-radius: 50%; background: color-mix(in srgb, var(--ink) 16%, transparent); }
+.card .bar span { margin: 0 auto; padding-right: 42px; }
+.card .in-pad { padding: 26px 28px 28px; }
+.card h2 { font: 800 clamp(27px, 3.1vw, 36px)/1.04 var(--round); letter-spacing: -.025em; }
+.card h2 + p { color: var(--muted); margin-top: 12px; text-wrap: pretty; }
+.card > .step { position: absolute; left: -15px; top: -15px; z-index: 2; }
+.card .art { margin-top: 24px; }
+.card.pic .in-pad { padding-bottom: 22px; }
+.card.pic img { border-radius: 0 0 13px 13px; }
+.c1 { grid-column: 1 / span 6; --r: -1.6deg; }
+.c2 { grid-column: 7 / span 6; --r: 1.3deg; margin-top: 110px; }
+.c3 { grid-column: 2 / span 6; --r: .9deg; margin-top: -70px; }
+.c4 { grid-column: 8 / span 5; --r: -1.2deg; margin-top: 70px; }
+.c5 { grid-column: 1 / span 5; --r: 1.4deg; margin-top: -30px; }
+.c6 { grid-column: 6 / span 7; --r: -.7deg; margin-top: 50px; }
+
+.keys { display: flex; gap: 22px; flex-wrap: wrap; }
+.keys figcaption { font-size: 12.5px; color: var(--muted); margin-top: 9px; }
+kbd {
+  display: inline-grid; place-items: center; min-width: 42px; height: 42px; margin-right: 5px; border-radius: 9px; font: 600 19px var(--round);
+  background: var(--key); color: var(--ink); box-shadow: 0 0 0 .5px color-mix(in srgb, var(--ink) 26%, transparent), 0 2px 0 color-mix(in srgb, var(--ink) 24%, transparent);
+}
+.res { display: flex; gap: 12px; align-items: center; padding: 11px 0; border-top: .5px solid var(--rule); font-size: 14px; }
+.res:first-of-type { border-top: 0; }
+.res .shot { width: 72px; flex: none; }
+.res mark { background: var(--hl); color: inherit; border-radius: 3px; padding: 0 3px; }
+.res small { display: block; color: var(--muted); font-size: 12px; }
+.art .search { height: 36px; border-radius: 9px; font-size: 15px; margin-bottom: 4px; }
+.caret { width: 1.5px; height: 17px; background: #0a84ff; margin-left: -5px; }
+.link { display: inline-flex; align-items: center; gap: 9px; font: 14px ui-monospace, "SF Mono", Menlo, monospace; background: var(--field); padding: 10px 14px; border-radius: 9px; }
+.link svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
+.c4 .scrawl { display: inline-block; transform: rotate(-6deg); margin: 12px 0 0 18px; }
+.plain { list-style: none; margin: 22px 0 0; padding: 0; }
+.plain li { padding: 12px 0; border-top: .5px solid var(--rule); color: var(--muted); font-size: 15px; }
+.plain li b { color: var(--ink); font-weight: 600; display: block; }
+.qa { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 30px; margin-top: 22px; }
+.qa h3 { font: 700 16px/1.25 var(--round); }
+.qa p { color: var(--muted); font-size: 14.5px; margin-top: 5px; }
+
+.end { text-align: center; padding: 90px 0 70px; }
+.end img { width: 92px; height: 92px; margin: 0 auto 16px; }
+.end h2 { font: 800 clamp(30px, 4.4vw, 46px)/1.04 var(--round); letter-spacing: -.03em; }
+.end .btn { margin-top: 22px; }
+footer { position: relative; z-index: 21; padding: 0 0 26px; font-size: 12px; color: var(--muted); text-align: center; }
+footer a { text-decoration: underline; text-underline-offset: 2px; }
+
+@media (max-width: 820px) {
+  nav.top a.tool span, nav.top .sep.h { display: none; }
+  nav.top a.tool { padding: 0 7px; }
+  .hero { padding-top: 44px; }
+  .go .note, .demo .tag { display: none; }
+  .demo { margin-top: 46px; }
+  .stage { height: 420px; border-radius: 12px; }
+  .panel { right: 50%; transform: translateX(50%); width: min(336px, calc(100% - 20px)); transform-origin: 50% 0; }
+  .stage.closed .panel { transform: translateX(50%) scale(.96); }
+  .win { display: none; }
+  .pile { padding-top: 80px; }
+  .heap { display: block; }
+  .card { margin: 0 0 34px !important; cursor: default; }
+  .card > .step { left: -8px; top: -12px; }
+  .qa { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  nav.top a.tool, nav.top .sep { display: none; }
+  nav.top .brand { margin-right: auto; }
+  nav.top { width: calc(100% - 20px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, svg.ink path { transition: none !important; }
+  .card { opacity: 1; translate: 0 0; }
+  svg.ink path { stroke-dashoffset: 0; } .hl { background-size: 100% 58%; }
+}
+</style>
+</head>
+<body>
+
+<div class="edge" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+<nav class="top" aria-label="Main">
+  <a class="brand" href="#top"><img src="icon.svg" alt="" width="26" height="26">scrsort</a>
+  <span class="sep"></span>
+  <a class="tool" href="#capture"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15"/><circle cx="12" cy="12" r="2.2"/></svg><span>Capture</span></a>
+  <a class="tool" href="#markup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19 19 5M19 5h-7M19 5v7"/></svg><span>Mark up</span></a>
+  <a class="tool" href="#find"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="m20 20-5-5"/></svg><span>Find</span></a>
+  <a class="tool" href="#share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><span>Share</span></a>
+  <a class="tool" href="#privacy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>Privacy</span></a>
+  <span class="sep h"></span>
+  <span class="inks" role="group" aria-label="Annotation colour">
+    <button type="button" style="--c:#ff3b30" aria-label="Red" aria-pressed="true"></button>
+    <button type="button" style="--c:#ff8a00" aria-label="Orange" aria-pressed="false"></button>
+    <button type="button" style="--c:#1fa64a" aria-label="Green" aria-pressed="false"></button>
+    <button type="button" style="--c:#0a84ff" aria-label="Blue" aria-pressed="false"></button>
+  </span>
+  <a class="btn s" href="https://github.com/f4w4z/scrsort-releases/releases/latest">Download</a>
+</nav>
+
+<main id="top">
+
+<section class="hero" data-reveal>
+  <div class="col">
+    <h1>Every <span class="hl">screenshot</span>,<br>right where you
+      <span class="ring">left it.<svg class="ink" viewBox="0 0 200 80" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M14 46 C8 18 62 5 110 6 C158 7 196 20 191 43 C186 66 140 75 96 74 C50 73 8 66 13 38 C15 25 32 14 54 10"/></svg></span></h1>
+    <p class="lede">scrsort is a screenshot app for Mac. Capture, mark up, and find any screenshot by the words inside it, from a quiet corner of your menu bar.</p>
+    <div>
+      <span class="go">
+        <a class="btn" href="https://github.com/f4w4z/scrsort-releases/releases/latest">Download for Mac</a>
+        <span class="note" aria-hidden="true">
+          <svg class="ink" viewBox="0 0 70 44"><path pathLength="1" d="M66 6 C44 2 20 12 6 34"/><path pathLength="1" d="M6 34 l2 -15 M6 34 l14 -5"/></svg>
+          <span class="step">1</span><span class="scrawl">start here</span>
+        </span>
+      </span>
+    </div>
+    <p class="fine">Version 0.1 · Requires macOS 15 or later</p>
+
+    <div class="demo">
+      <span class="tag" aria-hidden="true"><span class="scrawl" id="hintText">drag here to take a screenshot</span><svg class="ink" viewBox="0 0 46 50"><path pathLength="1" d="M6 4 C4 22 14 36 34 44"/><path pathLength="1" d="M34 44 l-14 -2 M34 44 l-5 -13"/></svg></span>
+      <div class="stage" id="stage">
+        <div class="flash" id="flash"></div>
+        <div class="menubar">
+          <span class="on" id="mbi" title="scrsort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V6a2 2 0 0 1 2-2h3M15 4h3a2 2 0 0 1 2 2v3M20 15v3a2 2 0 0 1-2 2h-3M9 20H6a2 2 0 0 1-2-2v-3"/><circle cx="12" cy="12" r="2.5"/></svg></span>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 18.5a1.6 1.6 0 1 0 0 3.200001 1.6 1.6 0 0 0 0-3.2ZM6.3 15.200001l1.6 1.6a5.8 5.8 0 0 1 8.2 0l1.6-1.6a8.1 8.1 0 0 0-11.4 0ZM2.5 11.4l1.6 1.6a11.2 11.2 0 0 1 15.8 0l1.6-1.6a13.4 13.4 0 0 0-19 0Z"/></svg>
+          <span id="clock">9:41 AM</span>
+        </div>
+        <div class="win" aria-hidden="true"><img src="img/editor-dark.png" width="1400" height="990" alt=""></div>
+        <div class="panel">
+          <label class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.6-4.6"/></svg>
+            <input id="q" type="search" placeholder="Search text in screenshots" autocomplete="off" spellcheck="false" aria-label="Demo: search the text inside these screenshots">
+          </label>
+          <div class="grid" id="grid">
+            <div class="shot"><b>Invoice #4821</b>Total due $1,240.00<br>Net 30 · Acme Studio</div>
+            <div class="shot w"><b>Flight to Lisbon</b>TP 1351 · Gate B14<br>Boarding 07:05</div>
+            <div class="shot d"><b>Error 502</b>Bad gateway<br>upstream timed out</div>
+            <div class="shot g"><b>Weekly metrics</b>Active users 12,480<br>Retention 41%</div>
+            <div class="shot"><b>Recipe</b>Shakshuka · 6 eggs<br>cumin, paprika</div>
+            <div class="shot v"><b>Color palette</b>#0A84FF #30D158<br>blue, green, orange</div>
+            <div class="none" id="none" hidden>No results</div>
+          </div>
+          <div class="pfoot"><span>Open Library</span><span>•••</span></div>
+        </div>
+      </div>
+      <button id="snap" type="button">Take one for me</button>
+    </div>
+  </div>
+</section>
+
+<section class="pile">
+  <div class="col">
+    <p class="say">What it does, in six screenshots. Pick them up and move them around.</p>
+    <div class="heap">
+
+      <article class="card c1" id="capture" data-reveal>
+        <span class="step" aria-hidden="true">1</span>
+        <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>Capture.png</span></div>
+        <div class="in-pad">
+          <h2>Take the shot.</h2>
+          <p>An area, a window or the whole screen, on <span class="hl">shortcuts you choose</span>. Each capture lands in your library and on your clipboard. Screenshots taken the usual way with ⌘⇧4 are picked up too.</p>
+          <div class="art keys">
+            <figure><kbd>⌃</kbd><kbd>⇧</kbd><kbd>4</kbd><figcaption>Area</figcaption></figure>
+            <figure><kbd>⌃</kbd><kbd>⇧</kbd><kbd>5</kbd><figcaption>Window</figcaption></figure>
+            <figure><kbd>⌃</kbd><kbd>⇧</kbd><kbd>3</kbd><figcaption>Whole screen</figcaption></figure>
+          </div>
+        </div>
+      </article>
+
+      <article class="card pic c2" id="markup" data-reveal>
+        <span class="step" aria-hidden="true">2</span>
+        <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>Mark up.png</span></div>
+        <div class="in-pad">
+          <h2>Say what you mean.</h2>
+          <p>Arrows, numbered steps, text, highlighter and crop, each one key away. Pixelate anything private; in the saved picture those pixels are <span class="hl">gone for good</span>.</p>
+        </div>
+        <img src="img/editor-dark.png" width="1400" height="990" loading="lazy" draggable="false" alt="The scrsort editor annotating a screenshot with an arrow, numbered steps, highlighted text and a pixelated email address">
+      </article>
+
+      <article class="card c3" id="find" data-reveal>
+        <span class="step" aria-hidden="true">3</span>
+        <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>Find.png</span></div>
+        <div class="in-pad">
+          <h2>Find it by what it says.</h2>
+          <p>scrsort reads the text in every screenshot, <span class="hl">right on your Mac</span>. Type a word you remember: a name, an order number, a line from an error.</p>
+          <div class="art">
+            <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.6-4.6"/></svg>invoice 4821<i class="caret"></i></div>
+            <div class="res"><div class="shot"><b>Invoice #4821</b>Total due $1,240.00</div><div><mark>Invoice</mark> #<mark>4821</mark> · Total due $1,240.00<small>Today, 9:41 AM</small></div></div>
+            <div class="res"><div class="shot g"><b>Re: invoice</b>4821 is attached</div><div>Re: <mark>invoice</mark> <mark>4821</mark> is attached<small>Tuesday</small></div></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card c4" id="share" data-reveal>
+        <span class="step" aria-hidden="true">4</span>
+        <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>Share.png</span></div>
+        <div class="in-pad">
+          <h2>Share with a link. Or don’t.</h2>
+          <p>One click uploads a single screenshot or a collection and copies its link. Stop sharing and the link goes dark.</p>
+          <div class="art">
+            <span class="link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.700001-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.700001l1-1"/></svg>scrsort.app/s/k3J9xQ2mVa</span>
+            <br><span class="scrawl" aria-hidden="true">copied!</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="card c5" id="privacy" data-reveal>
+        <span class="step" aria-hidden="true">5</span>
+        <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>Private.png</span></div>
+        <div class="in-pad">
+          <h2>Yours, and only yours.</h2>
+          <p>Screenshots hold passwords, messages and half-finished work. Like this one: <span class="pix" id="pix" aria-label="pixelated text"></span></p>
+          <ul class="plain">
+            <li><b>It stays on your Mac</b>Your library and the text read from it never leave it.</li>
+            <li><b>Sharing is your call</b>Nothing uploads unless you press Share. No account.</li>
+            <li><b>No tracking</b>No analytics, no ads, in the app or on shared pages.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="card c6" id="faq" data-reveal>
+        <span class="step" aria-hidden="true">6</span>
+        <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>Questions.png</span></div>
+        <div class="in-pad">
+          <h2>Good to know.</h2>
+          <div class="qa">
+            <div><h3>How do I search for text inside a screenshot on Mac?</h3><p>Click the scrsort icon in the menu bar and type a word. scrsort has already read the text in every screenshot, so matches appear as you type.</p></div>
+            <div><h3>Does scrsort upload my screenshots?</h3><p>No. They stay on your Mac. One is uploaded only when you choose Share for it, and you can stop sharing at any time.</p></div>
+            <div><h3>Does it replace the Mac’s own screenshot shortcuts?</h3><p>No. ⌘⇧3, ⌘⇧4 and ⌘⇧5 keep working, and those screenshots are added automatically. scrsort adds its own shortcuts, which you can change.</p></div>
+            <div><h3>Where are my screenshots stored?</h3><p>In scrsort’s own library in your Application Support folder. The originals in your screenshot folder are never moved or changed.</p></div>
+            <div><h3>Which Macs does it work on?</h3><p>Any Mac running macOS 15 or later.</p></div>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<section class="end" data-reveal>
+  <div class="col">
+    <img src="icon.svg" alt="" width="92" height="92" loading="lazy">
+    <h2>Get <span class="hl">scrsort</span> for Mac.</h2>
+    <a class="btn" href="https://github.com/f4w4z/scrsort-releases/releases/latest">Download for Mac</a>
+    <p class="fine">Version 0.1 · Requires macOS 15 or later</p>
+  </div>
+</section>
+
+</main>
+
+<footer>© 2026 scrsort</footer>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var q = $('q'), grid = $('grid'), none = $('none'), stage = $('stage'), hint = $('hintText'), flash = $('flash');
+  var calm = matchMedia('(prefers-reduced-motion: reduce)').matches, count = 0;
+
+  // Annotations draw themselves when their block scrolls into view.
+  var blocks = document.querySelectorAll('[data-reveal]');
+  if ('IntersectionObserver' in window && !calm) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, { threshold: .18 });
+    [].forEach.call(blocks, function (b) { io.observe(b); });
+  } else {
+    [].forEach.call(blocks, function (b) { b.classList.add('in'); });
+  }
+
+  // Live clock in the demo's menu bar.
+  function tick() {
+    var d = new Date();
+    $('clock').textContent = d.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  }
+  tick(); setInterval(tick, 20000);
+
+  // Pixelated sample, the way the editor's redaction looks.
+  var pix = $('pix'), shades = [18, 34, 9, 46, 26, 14, 40, 22, 52, 12, 30, 44, 8, 36];
+  for (var i = 0; i < 28; i++) { var c = document.createElement('i'); c.style.setProperty('--a', shades[(i * 5 + (i > 13 ? 3 : 0)) % 14]); pix.appendChild(c); }
+
+  // Search demo.
+  function filter() {
+    var words = q.value.toLowerCase().split(/\s+/).filter(Boolean), shown = 0;
+    [].forEach.call(grid.querySelectorAll('.shot'), function (s) {
+      var t = s.textContent.toLowerCase();
+      var hit = words.every(function (w) { return t.indexOf(w) !== -1; });
+      s.hidden = !hit; if (hit) shown++;
+    });
+    none.hidden = shown !== 0;
+  }
+  q.addEventListener('input', filter);
+  $('mbi').addEventListener('click', function () { stage.classList.toggle('closed'); });
+
+  // Capture demo. A captured tile shows the same wallpaper, scaled so the selected region fills it.
+  function crop(el, r, w, h) {
+    var k = Math.max(w / r.w, h / r.h);
+    el.style.background = getComputedStyle(stage).getPropertyValue('--wall');
+    el.style.backgroundSize = stage.clientWidth * k + 'px ' + stage.clientHeight * k + 'px';
+    el.style.backgroundPosition = -r.x * k + 'px ' + -r.y * k + 'px';
+  }
+  function capture(r) {
+    stage.classList.remove('closed');
+    q.value = ''; filter();
+    count++;
+    var tile = document.createElement('div');
+    tile.className = 'shot new';
+    tile.innerHTML = '<b>Screenshot ' + count + '</b>' + Math.round(r.w * 2) + ' × ' + Math.round(r.h * 2) + ' · just now';
+    var tiles = grid.querySelectorAll('.shot');
+    if (tiles.length >= 6) tiles[tiles.length - 1].remove();
+    [].forEach.call(grid.querySelectorAll('.new'), function (t) { t.style.outline = 'none'; });
+    grid.insertBefore(tile, grid.firstChild);
+    var sr = stage.getBoundingClientRect(), tr = tile.getBoundingClientRect();
+    crop(tile, r, tr.width, tr.height);
+    hint.textContent = 'saved! now search for it';
+    if (calm || !tile.animate) return;
+    flash.animate([{ opacity: .5 }, { opacity: 0 }], { duration: 260, easing: 'ease-out' });
+    var ghost = document.createElement('div');
+    ghost.className = 'ghost';
+    ghost.style.cssText = 'left:' + r.x + 'px;top:' + r.y + 'px;width:' + r.w + 'px;height:' + r.h + 'px';
+    crop(ghost, r, r.w, r.h);
+    stage.appendChild(ghost);
+    tile.style.visibility = 'hidden';
+    var dx = tr.left - sr.left - r.x, dy = tr.top - sr.top - r.y;
+    ghost.animate(
+      [{ transform: 'none' }, { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + tr.width / r.w + ',' + tr.height / r.h + ')' }],
+      { duration: 480, delay: 140, easing: 'cubic-bezier(.3,.7,.2,1)', fill: 'forwards' }
+    );
+    // Timer rather than onfinish: animations can be paused in a background tab.
+    setTimeout(function () { ghost.remove(); tile.style.visibility = ''; }, 660);
+  }
+  var sel = null, start = null;
+  function rect(e) {
+    var sr = stage.getBoundingClientRect();
+    var x = Math.min(Math.max(e.clientX - sr.left, 0), sr.width), y = Math.min(Math.max(e.clientY - sr.top, 0), sr.height);
+    return { x: Math.min(x, start.x), y: Math.min(y, start.y), w: Math.abs(x - start.x), h: Math.abs(y - start.y) };
+  }
+  stage.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'touch' || e.button !== 0 || e.target.closest('.panel, .menubar')) return;
+    var sr = stage.getBoundingClientRect();
+    start = { x: e.clientX - sr.left, y: e.clientY - sr.top };
+    [].forEach.call(stage.querySelectorAll('.sel'), function (el) { el.remove(); });
+    sel = document.createElement('div'); sel.className = 'sel'; sel.innerHTML = '<span></span>';
+    stage.appendChild(sel);
+    stage.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  stage.addEventListener('pointermove', function (e) {
+    if (!sel) return;
+    var r = rect(e);
+    sel.style.cssText = 'left:' + r.x + 'px;top:' + r.y + 'px;width:' + r.w + 'px;height:' + r.h + 'px';
+    sel.firstChild.textContent = Math.round(r.w * 2) + ' × ' + Math.round(r.h * 2);
+  });
+  function end(e) {
+    if (!sel) return;
+    var r = rect(e);
+    sel.remove(); sel = null;
+    if (e.type === 'pointerup' && r.w > 24 && r.h > 24) capture(r);
+  }
+  stage.addEventListener('pointerup', end);
+  stage.addEventListener('pointercancel', end);
+  $('snap').addEventListener('click', function () {
+    var w = stage.clientWidth, h = stage.clientHeight, rw = Math.min(260, w * .5), rh = 160;
+    capture({ x: Math.random() * (w - rw - 40) + 20, y: 60 + Math.random() * (h - rh - 100), w: rw, h: rh });
+  });
+
+  // Toolbar: swatches recolour every annotation on the page; the tool for the section in view is selected.
+  var inks = [].slice.call(document.querySelectorAll('.inks button'));
+  function ink(c) {
+    document.documentElement.style.setProperty('--red', c);
+    inks.forEach(function (b) { b.setAttribute('aria-pressed', String(b.style.getPropertyValue('--c') === c)); });
+    try { localStorage.setItem('ink', c); } catch (e) {}
+  }
+  inks.forEach(function (b) { b.addEventListener('click', function () { ink(b.style.getPropertyValue('--c')); }); });
+  try { var saved = localStorage.getItem('ink'); if (saved && inks.some(function (b) { return b.style.getPropertyValue('--c') === saved; })) ink(saved); } catch (e) {}
+
+  var tools = [].slice.call(document.querySelectorAll('nav.top a.tool'));
+  if ('IntersectionObserver' in window) {
+    var spy = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        tools.forEach(function (t) { t.classList.toggle('on', t.getAttribute('href') === '#' + en.target.id); });
+      });
+    }, { rootMargin: '-35% 0px -55% 0px' });
+    tools.forEach(function (t) { var el = document.querySelector(t.getAttribute('href')); if (el) spy.observe(el); });
+  }
+
+  // The pile: pick a screenshot up and move it (mouse and pen only; touch scrolls).
+  var top = 2;
+  [].forEach.call(document.querySelectorAll('.card'), function (card) {
+    var from = null;
+    card.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'touch' || e.button !== 0 || e.target.closest('a, input, button') || matchMedia('(max-width: 820px)').matches) return;
+      from = { px: e.clientX, py: e.clientY, x: parseFloat(card.style.getPropertyValue('--x')) || 0, y: parseFloat(card.style.getPropertyValue('--y')) || 0 };
+      card.classList.add('drag'); card.style.zIndex = ++top;
+      card.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    card.addEventListener('pointermove', function (e) {
+      if (!from) return;
+      card.style.setProperty('--x', from.x + e.clientX - from.px + 'px');
+      card.style.setProperty('--y', from.y + e.clientY - from.py + 'px');
+    });
+    function drop() { from = null; card.classList.remove('drag'); }
+    card.addEventListener('pointerup', drop);
+    card.addEventListener('pointercancel', drop);
+  });
+})();
+</script>
+
+</body>
+</html>
