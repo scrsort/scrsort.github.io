@@ -645,14 +645,14 @@ document.querySelectorAll('[data-copy]').forEach(function (b) {
   b.addEventListener('click', function () {
     var el = document.getElementById(b.dataset.copy);
     var done = function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1600); };
-    // Fallback: select the command so ⌘C works even where the Clipboard API is unavailable.
-    var fallback = function () {
-      var r = document.createRange(); r.selectNodeContents(el);
-      var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
-      if (document.execCommand && document.execCommand('copy')) done();
-    };
-    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(el.textContent).then(done, fallback);
-    else fallback();
+    // Select the command and copy synchronously inside the click (works in every browser);
+    // fall back to the Clipboard API, and if both fail the selection is left for ⌘C.
+    var r = document.createRange(); r.selectNodeContents(el);
+    var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    if (ok) { sel.removeAllRanges(); done(); }
+    else if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(el.textContent).then(done, function () {});
   });
 });
 </script>
