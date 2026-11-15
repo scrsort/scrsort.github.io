@@ -137,8 +137,8 @@ nav.top .inks button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0
 .hl { background: linear-gradient(var(--hl), var(--hl)) no-repeat 0 62% / 0% 58%; transition: background-size .6s var(--ease-out) .25s; padding: 0 .08em; margin: 0 -.08em; border-radius: .12em; }
 .in .hl, .hl.in { background-size: 100% 58%; }
 .ring { position: relative; white-space: nowrap; }
-.ring svg { position: absolute; left: -7%; top: -14%; width: 114%; height: 132%; overflow: visible; pointer-events: none; }
-svg.ink path { fill: none; stroke: var(--red); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset .8s cubic-bezier(.4,.6,.2,1) .5s; }
+.ring svg { position: absolute; left: -13%; top: -17%; width: 125%; height: 142%; overflow: visible; pointer-events: none; }
+svg.ink path { fill: none; stroke: var(--red); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset .8s cubic-bezier(.4,.6,.2,1) .5s; }
 .in svg.ink path, svg.ink.in path { stroke-dashoffset: 0; }
 svg.ink path + path { transition-delay: 1.15s; transition-duration: .25s; }
 .step {
@@ -665,6 +665,25 @@ fetch('https://api.github.com/repos/scrsort/scrsort-releases/releases/latest', {
     if (v) document.querySelectorAll('[data-version]').forEach(function (el) { el.textContent = v[1]; });
   })
   .catch(function () {});
+</script>
+<script>
+// The ring around "left it." stretches with the heading. Redraw its path in real pixels so the
+// stroke stays even and the draw-in animation (pathLength) works in every browser; stretching it
+// with preserveAspectRatio="none" + non-scaling-stroke breaks the animation in WebKit.
+(function () {
+  var svg = document.querySelector('.ring svg'); if (!svg) return;
+  var path = svg.querySelector('path'), d0 = path.getAttribute('d');
+  var vb = svg.viewBox.baseVal, w0 = vb.width, h0 = vb.height;
+  svg.removeAttribute('preserveAspectRatio');
+  function fit() {
+    var r = svg.getBoundingClientRect(); if (!r.width || !r.height) return;
+    var sx = r.width / w0, sy = r.height / h0, i = 0;
+    svg.setAttribute('viewBox', '0 0 ' + r.width.toFixed(1) + ' ' + r.height.toFixed(1));
+    path.setAttribute('d', d0.replace(/-?\d*\.?\d+/g, function (n) { return (+n * (i++ % 2 ? sy : sx)).toFixed(1); }));
+  }
+  fit();
+  if ('ResizeObserver' in window) new ResizeObserver(fit).observe(svg); else addEventListener('resize', fit);
+})();
 </script>
 </body>
 </html>
