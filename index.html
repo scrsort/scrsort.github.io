@@ -157,6 +157,7 @@ h1 { font: 800 clamp(44px, 8.4vw, 96px)/.98 var(--round); letter-spacing: -.035e
 .go .note { position: absolute; left: calc(100% + 26px); top: -34px; width: 190px; text-align: left; display: flex; align-items: center; gap: 10px; transform: rotate(-4deg); }
 .go .note svg { position: absolute; left: -34px; top: 30px; width: 70px; height: 44px; overflow: visible; }
 .fine { font-size: 12.5px; color: var(--muted); margin-top: 12px; }
+.fine a { text-decoration: underline; text-underline-offset: 2px; }
 
 /* Desktop demo */
 .demo { position: relative; margin-top: 74px; }
@@ -261,6 +262,12 @@ kbd {
 .qa { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 30px; margin-top: 22px; }
 .qa h3 { font: 700 16px/1.25 var(--round); }
 .qa p { color: var(--muted); font-size: 14.5px; margin-top: 5px; }
+.qa > div { min-width: 0; }
+.qa .wide { grid-column: 1 / -1; scroll-margin-top: 80px; }
+.cmd { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 8px 8px 8px 14px; background: var(--field); border-radius: 10px; }
+.cmd code { flex: 1; min-width: 0; font: 13px/1.4 ui-monospace, "SF Mono", Menlo, monospace; color: var(--ink); overflow-wrap: anywhere; }
+.cmd button { flex: none; font: 600 12.5px var(--sans); color: var(--ink); background: var(--paper); border: 0; border-radius: 7px; padding: 6px 11px; cursor: pointer; box-shadow: 0 0 0 .5px var(--rule); }
+.cmd button:active { transform: scale(.96); }
 
 .end { text-align: center; padding: 90px 0 70px; }
 .end img { width: 92px; height: 92px; margin: 0 auto 16px; }
@@ -336,7 +343,7 @@ footer a { text-decoration: underline; text-underline-offset: 2px; }
         </span>
       </span>
     </div>
-    <p class="fine">Version 0.1 · Requires macOS 15 or later</p>
+    <p class="fine">Version 0.1 · Requires macOS 15 or later · <a href="#open">Trouble opening it?</a></p>
 
     <div class="demo">
       <span class="tag" aria-hidden="true"><span class="scrawl" id="hintText">drag here to take a screenshot</span><svg class="ink" viewBox="0 0 46 50"><path pathLength="1" d="M6 4 C4 22 14 36 34 44"/><path pathLength="1" d="M34 44 l-14 -2 M34 44 l-5 -13"/></svg></span>
@@ -451,7 +458,9 @@ footer a { text-decoration: underline; text-underline-offset: 2px; }
             <div><h3>Does it replace the Mac’s own screenshot shortcuts?</h3><p>No. ⌘⇧3, ⌘⇧4 and ⌘⇧5 keep working, and those screenshots are added automatically. scrsort adds its own shortcuts, which you can change.</p></div>
             <div><h3>Where are my screenshots stored?</h3><p>In scrsort’s own library in your Application Support folder. The originals in your screenshot folder are never moved or changed.</p></div>
             <div><h3>Which Macs does it work on?</h3><p>Any Mac running macOS 15 or later.</p></div>
-            <div><h3>macOS says it can’t open scrsort. What now?</h3><p>This early version isn’t notarized by Apple yet. Open it once, then go to System Settings → Privacy &amp; Security and choose Open Anyway. You only need to do this the first time.</p></div>
+            <div class="wide" id="open"><h3>macOS says it can’t open scrsort. What now?</h3><p>This early version isn’t notarized by Apple yet, so macOS asks you to confirm it once. Click Done, then go to System Settings → Privacy &amp; Security and choose Open Anyway. You only need to do this once per version.</p>
+              <p>Comfortable with Terminal? Move scrsort to Applications, then paste this line instead. It only affects scrsort.</p>
+              <div class="cmd"><code id="cmd">xattr -dr com.apple.quarantine /Applications/Scrsort.app</code><button type="button" data-copy="cmd">Copy</button></div></div>
           </div>
         </div>
       </article>
@@ -465,7 +474,7 @@ footer a { text-decoration: underline; text-underline-offset: 2px; }
     <img src="icon.svg" alt="" width="92" height="92" loading="lazy">
     <h2>Get <span class="hl">scrsort</span> for Mac.</h2>
     <a class="btn" href="https://github.com/scrsort/scrsort-releases/releases/latest/download/scrsort.dmg" download>Download for Mac</a>
-    <p class="fine">Version 0.1 · Requires macOS 15 or later</p>
+    <p class="fine">Version 0.1 · Requires macOS 15 or later · <a href="#open">Trouble opening it?</a></p>
   </div>
 </section>
 
@@ -630,5 +639,22 @@ footer a { text-decoration: underline; text-underline-offset: 2px; }
 })();
 </script>
 
+<script>
+// Copy buttons for Terminal commands.
+document.querySelectorAll('[data-copy]').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var el = document.getElementById(b.dataset.copy);
+    var done = function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1600); };
+    // Fallback: select the command so ⌘C works even where the Clipboard API is unavailable.
+    var fallback = function () {
+      var r = document.createRange(); r.selectNodeContents(el);
+      var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      if (document.execCommand && document.execCommand('copy')) done();
+    };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(el.textContent).then(done, fallback);
+    else fallback();
+  });
+});
+</script>
 </body>
 </html>
