@@ -33,7 +33,7 @@
       "description": "A screenshot app for Mac. Capture, annotate and organise screenshots, and search them by the text inside. Lives in the menu bar and keeps everything on your Mac.",
       "applicationCategory": "UtilitiesApplication",
       "operatingSystem": "macOS 15 or later",
-      "softwareVersion": "0.1.0",
+      "softwareVersion": "0.1.1",
       "url": "https://scrsort.github.io/",
       "downloadUrl": "https://github.com/scrsort/scrsort-releases/releases/latest/download/scrsort.dmg",
       "image": "https://scrsort.github.io/icon-512.png",
@@ -343,7 +343,7 @@ footer a { text-decoration: underline; text-underline-offset: 2px; }
         </span>
       </span>
     </div>
-    <p class="fine">Version 0.1 · Requires macOS 15 or later · <a href="#open">Trouble opening it?</a></p>
+    <p class="fine">Version <span data-version>0.1.1</span> · Requires macOS 15 or later · <a href="#open">Trouble opening it?</a></p>
 
     <div class="demo">
       <span class="tag" aria-hidden="true"><span class="scrawl" id="hintText">drag here to take a screenshot</span><svg class="ink" viewBox="0 0 46 50"><path pathLength="1" d="M6 4 C4 22 14 36 34 44"/><path pathLength="1" d="M34 44 l-14 -2 M34 44 l-5 -13"/></svg></span>
@@ -474,7 +474,7 @@ footer a { text-decoration: underline; text-underline-offset: 2px; }
     <img src="icon.svg" alt="" width="92" height="92" loading="lazy">
     <h2>Get <span class="hl">scrsort</span> for Mac.</h2>
     <a class="btn" href="https://github.com/scrsort/scrsort-releases/releases/latest/download/scrsort.dmg" download>Download for Mac</a>
-    <p class="fine">Version 0.1 · Requires macOS 15 or later · <a href="#open">Trouble opening it?</a></p>
+    <p class="fine">Version <span data-version>0.1.1</span> · Requires macOS 15 or later · <a href="#open">Trouble opening it?</a></p>
   </div>
 </section>
 
@@ -655,6 +655,16 @@ document.querySelectorAll('[data-copy]').forEach(function (b) {
     else if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(el.textContent).then(done, function () {});
   });
 });
+</script>
+<script>
+// Show the latest released version; the number in the HTML is the fallback.
+fetch('https://api.github.com/repos/scrsort/scrsort-releases/releases/latest', { headers: { Accept: 'application/vnd.github+json' } })
+  .then(function (r) { return r.ok ? r.json() : null; })
+  .then(function (rel) {
+    var v = rel && /^v?(\d+(\.\d+)*)$/.exec(rel.tag_name || '');
+    if (v) document.querySelectorAll('[data-version]').forEach(function (el) { el.textContent = v[1]; });
+  })
+  .catch(function () {});
 </script>
 </body>
 </html>
